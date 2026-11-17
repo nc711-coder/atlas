@@ -4,4 +4,7 @@ rasterio
 numpy
 matplotlib
 geopandas
+pyarrow
 python-dotenv
+requests
+h3
