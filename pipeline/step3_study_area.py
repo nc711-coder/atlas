@@ -223,6 +223,13 @@ def main():
     inside = inside[~inside.index.duplicated(keep="first")]
     jm = jm.loc[inside.index].copy()
     jm["submarket"] = inside["submarket"]
+    # Keep a parcel only if at least half of it lies inside its submarket, so a long trail or rail
+    # parcel that merely crosses a boundary isn't pulled in whole.
+    sub_geom = bounds_m.set_index("submarket").geometry
+    share_in = jm.geometry.intersection(gpd.GeoSeries(sub_geom.loc[jm["submarket"]].values, index=jm.index,
+                                                      crs=METRIC_CRS)).area / jm.geometry.area
+    report["parcels_dropped_mostly_outside"] = int((share_in < 0.5).sum())
+    jm = jm[share_in >= 0.5].copy()
     jm["pid"] = np.arange(len(jm))
     report["parcels_inside_boundaries"] = len(jm)
     report["parcels_by_submarket"] = {k: int(v) for k, v in jm["submarket"].value_counts().items()}
@@ -239,12 +246,12 @@ def main():
     jm["est_far"] = (overlap_by_parcel(jm, b[["floors", "geometry"]], "floors").reindex(jm["pid"]).fillna(0).to_numpy()
                      / area.to_numpy()).round(3)
 
-    # ---------------- parking: share of the parcel that is parking lot (driveways excluded)
+    # ---------------- parking: share of the parcel that is parking lot
     p = gpd.read_parquet(STEP2 / "raw" / "parking_current.parquet").to_crs(METRIC_CRS)
     p["geometry"] = p.geometry.make_valid()
     p = p[p.intersects(study)]
     report["parking_types_in_study_area"] = {k: int(v) for k, v in p["TYPE"].value_counts().items()}
-    lots = p[~p["TYPE"].fillna("").str.upper().str.contains("DRIVEWAY")]
+    lots = p[p["TYPE"].fillna("").str.upper().str.contains("PARKING LOT")]   # not driveways or private roads
     jm["parking_share"] = (overlap_by_parcel(jm, lots[["geometry"]]).reindex(jm["pid"]).fillna(0).to_numpy()
                            / area.to_numpy()).clip(0, 1).round(3)
 

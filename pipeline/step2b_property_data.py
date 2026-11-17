@@ -47,9 +47,9 @@ def post(url, params):
             time.sleep(2 ** attempt)
 
 
-def fetch_map_layer(service, bbox):
+def fetch_map_layer(service, bbox, layer=0):
     """All features of a map layer that touch a lon/lat box, page by page."""
-    url = f"{BASE}/{service}/FeatureServer/0/query"
+    url = f"{BASE}/{service}/FeatureServer/{layer}/query"
     envelope = {"xmin": bbox[0], "ymin": bbox[1], "xmax": bbox[2], "ymax": bbox[3], "spatialReference": {"wkid": 4326}}
     features, offset = [], 0
     while True:

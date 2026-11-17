@@ -8,3 +8,6 @@ pyarrow
 python-dotenv
 requests
 h3
+torch
+torchvision
+scikit-learn
