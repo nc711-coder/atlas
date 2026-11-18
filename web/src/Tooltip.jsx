@@ -21,7 +21,7 @@ export default function Tooltip({ hover }) {
   return (
     <div className="tooltip" style={style}>
       <div className="tt-title">
-        {p.cand_land_m2 > 0 ? `Score ${p.score.toFixed(1)} · #${p.rank}` : "No candidate land"}
+        {!(p.cand_land_m2 > 0) ? "No candidate land" : p.filtered ? "Filtered out by your settings" : `Score ${p.score.toFixed(1)} · #${p.rank}`}
       </div>
       <div className="muted">
         {p.cand_parcels} candidate parcels · {acres(p.cand_land_m2 / 4046.86)} buildable

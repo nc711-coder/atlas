@@ -1,17 +1,26 @@
+import { useMemo } from "react";
 import { acres, meters, pct, SUBMARKET_LABEL, titleCase, usd } from "./format.js";
+import ScatterBrush from "./ScatterBrush.jsx";
+import ScoreBreakdown from "./ScoreBreakdown.jsx";
+import WeightSliders from "./WeightSliders.jsx";
 
-// Right-hand panel: the top-10 list, or the selected hexagon's facts and parcels.
-export default function SidePanel({ top10, detail, selected, onSelect }) {
+// Right-hand panel: weights + top 10 + scatter, or the selected hexagon's facts, score breakdown and parcels.
+export default function SidePanel(props) {
+  const { hexes, ranked, color, detail, selected, selectedProps, onSelect, onBrush, onHover } = props;
+  // Same array between renders unless the hexagons change, so hovering doesn't rebuild the chart mid-drag.
+  const scatterData = useMemo(() => hexes.filter((f) => !f.properties.filtered), [hexes]);
   if (!selected) {
     return (
       <aside className="panel">
+        <WeightSliders weights={props.weights} onChange={props.onWeights} minAcres={props.minAcres}
+                       onMinAcres={props.onMinAcres} busy={props.busy} />
         <h2>Top 10 opportunity zones</h2>
         <p className="muted small">
           Each hexagon (~0.1 km²) is scored on underused land, surface parking seen in 2025 aerial imagery, Metro
           access, land worth more than its buildings, rezoning activity and land available. Click one on the map or below.
         </p>
         <ol className="toplist">
-          {top10.map((f) => {
+          {ranked.slice(0, 10).map((f) => {
             const p = f.properties;
             return (
               <li key={p.hex}>
@@ -30,12 +39,14 @@ export default function SidePanel({ top10, detail, selected, onSelect }) {
             );
           })}
         </ol>
+        <ScatterBrush features={scatterData} color={color} selected={selected}
+                      onBrush={onBrush} onSelect={onSelect} onHover={onHover} />
         <Footnote />
       </aside>
     );
   }
 
-  if (!detail) {
+  if (!detail || !selectedProps) {
     return (
       <aside className="panel">
         <button className="link" onClick={() => onSelect(null)}>← All zones</button>
@@ -44,22 +55,23 @@ export default function SidePanel({ top10, detail, selected, onSelect }) {
     );
   }
 
-  const p = detail.hex.properties;
+  const p = selectedProps;
   const parcels = [...detail.parcels.features].sort((a, b) => (b.properties.acres || 0) - (a.properties.acres || 0));
   return (
     <aside className="panel">
       <button className="link" onClick={() => onSelect(null)}>← All zones</button>
       <h2>
-        {SUBMARKET_LABEL[p.submarket]} zone #{p.rank}
+        {SUBMARKET_LABEL[p.submarket]} zone {p.rank ? `#${p.rank}` : "(filtered out)"}
       </h2>
       <div className="score-big">
-        {p.score.toFixed(1)} <span className="muted small">/ 100 opportunity score</span>
+        {p.filtered ? "–" : p.score.toFixed(1)} <span className="muted small">/ 100 opportunity score</span>
       </div>
       {p.needs_review && (
         <div className="badge warn block">
           ⚠ Needs analyst review: {p.imagery_lowconf_share > 0.4 ? "many low-confidence imagery calls" : "several tax records disagree with building footprints"}
         </div>
       )}
+      {!p.filtered && <ScoreBreakdown props={p} weights={props.weights} />}
 
       <dl className="facts">
         <dt>Candidate land (buildable)</dt>

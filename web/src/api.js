@@ -7,7 +7,18 @@ async function get(path) {
   return r.json();
 }
 
+async function post(path, body) {
+  const r = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`${path}: ${r.status}`);
+  return r.json();
+}
+
 export const api = {
+  rank: (weights) => post("/api/rank?top=200", weights),
   hexes: () => get("/api/hexes"),
   hex: (id) => get(`/api/hexes/${encodeURIComponent(id)}`),
   meta: () => get("/api/meta"),
