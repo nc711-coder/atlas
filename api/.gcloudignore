@@ -1,0 +1,3 @@
+# Files Cloud Run should NOT upload (everything else in api/, including data/, is uploaded)
+__pycache__/
+.pytest_cache/
