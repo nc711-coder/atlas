@@ -24,14 +24,22 @@ SETS = {
              "classes": ["built", "parking", "green", "bare_or_construction", "other"]},
     "train": {"items": "to_label_train.csv", "labels": "labels_train.csv",
               "classes": ["built", "parking", "green", "other"]},
+    # change = step 6 pairs: 2018 on the left, 2025 on the right
+    "change": {"items": "to_label_change.csv", "labels": "labels_change.csv",
+               "classes": ["no_real_change", "changed"], "img_prefix": "change_", "img_w": 968,
+               "question": "Did something real change between 2018 (left) and 2025 (right)?"},
 }
+DEFAULT_QUESTION = "What covers most of this tile?"
 GUIDE = {
     "built": "any building roof (office, shop, home, warehouse, parking garage). A tall building's visible side wall counts as building.",
     "parking": "surface parking lots, including the driving aisles inside them",
     "green": "trees, grass, planted areas",
     "bare_or_construction": "bare soil, gravel, foundations, active building sites",
     "other": "roads, highways, ramps, sidewalks, water, or no clear majority",
+    "no_real_change": "same use in both years. Ignore differences in colour, sharpness, shadows, season, parked cars.",
+    "changed": "a real change on the ground: new or demolished building, land cleared or paved, new parking lot, construction under way",
 }
+CURRENT = SETS["eval"]
 ITEMS = STEP4 / SETS["eval"]["items"]
 LABELS = STEP4 / SETS["eval"]["labels"]
 CLASSES = SETS["eval"]["classes"]
@@ -65,7 +73,7 @@ def save_label(tile_id, label):
 PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Atlas tile labelling</title>
 <style>
  body{font-family:system-ui,sans-serif;margin:24px;display:flex;gap:32px;background:#fafafa;color:#222}
- img{width:480px;height:480px;image-rendering:auto;border:1px solid #999;background:#ddd}
+ img{width:%IMGW%px;height:480px;image-rendering:auto;border:1px solid #999;background:#ddd}
  .side{max-width:460px} .btn{display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;
  font-size:16px;border:1px solid #bbb;border-radius:6px;background:#fff;cursor:pointer}
  .btn.chosen{background:#ffe8cc;border-color:#d97706} kbd{background:#eee;border:1px solid #bbb;border-radius:4px;padding:1px 6px}
@@ -74,7 +82,7 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Atlas tile lab
 </style></head><body>
 <div><img id="img"><div class="muted" id="tid"></div></div>
 <div class="side">
- <h2 style="margin-top:0">What covers most of this tile?</h2>
+ <h2 style="margin-top:0">%QUESTION%</h2>
  <div id="progress"></div><div class="bar"><div id="fill" style="width:0"></div></div>
  <div id="buttons"></div>
  <p class="muted"><kbd>1</kbd>-<kbd>5</kbd> label &middot; <kbd>Backspace</kbd> previous &middot; <kbd>&rarr;</kbd> skip for now<br>
@@ -96,7 +104,7 @@ async function init(){
 }
 function show(){
   const t = items[i], done = Object.keys(labels).length;
-  document.getElementById('img').src = '/img/' + t.tile_id + '.png';
+  document.getElementById('img').src = '/img/%PREFIX%' + t.tile_id + '.png';
   document.getElementById('tid').textContent = `tile ${i+1} of ${items.length}: ${t.tile_id}`;
   document.getElementById('progress').textContent = `${done} of ${items.length} labelled`;
   document.getElementById('fill').style.width = (100*done/items.length) + '%';
@@ -126,7 +134,13 @@ def build_page():
     if "bare_or_construction" not in CLASSES:
         guide["other"] = "roads, highways, ramps, sidewalks, water, bare ground or construction, or no clear majority"
     items = "".join(f"<li><b>{c}</b>: {guide[c]}</li>" for c in CLASSES)
-    return PAGE.replace("%CLASSES%", json.dumps(CLASSES)).replace("%GUIDE%", items)
+    page = PAGE.replace("%CLASSES%", json.dumps(CLASSES)).replace("%GUIDE%", items)
+    page = page.replace("%QUESTION%", CURRENT.get("question", DEFAULT_QUESTION))
+    page = page.replace("%PREFIX%", CURRENT.get("img_prefix", "")).replace("%IMGW%", str(CURRENT.get("img_w", 480)))
+    if "img_prefix" in CURRENT:   # pairs: the "largest share" hint does not apply
+        page = page.replace("Each tile is 60 m x 60 m from the 2025 aerial photo. Pick what covers the <b>largest share</b> of it.",
+                            "Each pair shows the same 60 m x 60 m spot. Left: 2018 photo. Right: 2025 photo.")
+    return page
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -168,10 +182,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    global ITEMS, LABELS, CLASSES
+    global ITEMS, LABELS, CLASSES, CURRENT
     ap = argparse.ArgumentParser()
     ap.add_argument("--set", choices=SETS, default="eval")
-    chosen = SETS[ap.parse_args().set]
+    chosen = CURRENT = SETS[ap.parse_args().set]
     ITEMS, LABELS, CLASSES = STEP4 / chosen["items"], STEP4 / chosen["labels"], chosen["classes"]
     server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)   # only reachable from this PC
     url = f"http://localhost:{PORT}"
