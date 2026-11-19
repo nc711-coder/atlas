@@ -22,4 +22,5 @@ export const api = {
   hexes: () => get("/api/hexes"),
   hex: (id) => get(`/api/hexes/${encodeURIComponent(id)}`),
   meta: () => get("/api/meta"),
+  landcover: () => get("/api/landcover"),
 };

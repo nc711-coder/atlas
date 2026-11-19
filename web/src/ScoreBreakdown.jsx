@@ -16,7 +16,7 @@ export default function ScoreBreakdown({ props, weights }) {
     }));
     const W = 368, rowH = 26, left = 150, right = 40, H = rows.length * rowH + 6;
     const x = d3.scaleLinear().domain([0, Math.max(1, d3.max(rows, (r) => r.max))]).range([0, W - left - right]);
-    const svg = d3.select(ref.current).attr("viewBox", `0 0 ${W} ${H}`).attr("width", W).attr("height", H);
+    const svg = d3.select(ref.current).attr("viewBox", `0 0 ${W} ${H}`).attr("width", "100%").attr("height", null);
     svg.selectAll("*").remove();
     const g = svg.selectAll("g.row").data(rows).join("g").attr("transform", (_, i) => `translate(0,${i * rowH + 3})`);
     g.append("text").attr("x", 0).attr("y", 14).attr("class", "chart-label").text((r) => r.label);

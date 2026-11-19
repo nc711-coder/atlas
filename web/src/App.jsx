@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api.js";
 import { loadGoogleMaps } from "./googleMaps.js";
 import { createD3Overlay } from "./d3Overlay.js";
-import { BAND_COLORS, BAND_LABELS, makeScoreColor, REVIEW_COLOR } from "./scale.js";
+import { BAND_COLORS, BAND_LABELS, LANDCOVER_COLORS, LANDCOVER_LABELS, makeScoreColor, REVIEW_COLOR } from "./scale.js";
 import { DEFAULT_WEIGHTS, FACTORS } from "./weights.js";
 import SidePanel from "./SidePanel.jsx";
 import Tooltip from "./Tooltip.jsx";
+import Methods from "./Methods.jsx";
 
 const SUBMARKETS = [
   { id: "tysons", label: "Tysons" },
@@ -28,6 +29,9 @@ export default function App() {
   const [highlight, setHighlight] = useState(null);
   const [hover, setHover] = useState(null);
   const [error, setError] = useState(null);
+  const [layer, setLayer] = useState("score"); // "score" | "landcover"
+  const [landcover, setLandcover] = useState(null);
+  const [showMethods, setShowMethods] = useState(false);
 
   // Load data and the map once.
   useEffect(() => {
@@ -90,6 +94,26 @@ export default function App() {
     if (overlayRef.current && hexes) overlayRef.current.setData({ hexes, color, highlight });
   }, [hexes, color, highlight]);
 
+  // Land-cover layer: load the tiles the first time it is switched on.
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    if (layer === "landcover" && !landcover) {
+      api
+        .landcover()
+        .then((fc) => {
+          const tiles = fc.features.map((f) => {
+            const xs = f.geometry.coordinates[0].map((c) => c[0]), ys = f.geometry.coordinates[0].map((c) => c[1]);
+            return { ...f, bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] };
+          });
+          setLandcover(tiles);
+        })
+        .catch((e) => setError(e.message));
+      return;
+    }
+    overlay.setData({ showLandcover: layer === "landcover", landcover: landcover || [] });
+  }, [layer, landcover]);
+
   // Selecting a hexagon: fetch its parcels, draw them, and zoom to it.
   useEffect(() => {
     const overlay = overlayRef.current;
@@ -141,6 +165,7 @@ export default function App() {
           <strong>Atlas</strong> <span className="muted">· Opportunity map for Larkspur Commercial Partners (fictional client)</span>
         </div>
         <nav>
+          <button className="primary" onClick={() => setShowMethods(true)}>Methods & results</button>
           {SUBMARKETS.map((s) => (
             <button key={s.id} onClick={() => goToSubmarket(s.id)}>
               {s.label}
@@ -158,7 +183,11 @@ export default function App() {
               {highlight.size} zones highlighted from the chart · <button className="link" onClick={() => setHighlight(null)}>clear</button>
             </div>
           )}
-          <Legend custom={!!ranking} />
+          <div className="layer-switch" role="radiogroup" aria-label="Map layer">
+            <label><input type="radio" checked={layer === "score"} onChange={() => setLayer("score")} /> Opportunity score</label>
+            <label><input type="radio" checked={layer === "landcover"} onChange={() => setLayer("landcover")} /> Land cover (imagery AI)</label>
+          </div>
+          {layer === "score" ? <Legend custom={!!ranking} /> : <LandcoverLegend loading={!landcover} />}
         </div>
         <SidePanel
           hexes={hexes || []}
@@ -178,6 +207,7 @@ export default function App() {
         />
       </main>
       <Tooltip hover={hover} />
+      {showMethods && <Methods onClose={() => setShowMethods(false)} />}
     </div>
   );
 }
@@ -204,6 +234,25 @@ function Legend({ custom }) {
         </svg>
         no candidate land / filtered out
       </div>
+    </div>
+  );
+}
+
+function LandcoverLegend({ loading }) {
+  return (
+    <div className="legend" aria-label="Land-cover legend">
+      <div className="legend-title">2025 land cover, per 60 m tile {loading ? "(loading…)" : ""}</div>
+      {Object.entries(LANDCOVER_COLORS).map(([k, c]) => (
+        <div className="legend-row" key={k}>
+          <span className="swatch" style={{ background: c }} />
+          {LANDCOVER_LABELS[k]}
+        </div>
+      ))}
+      <div className="legend-row">
+        <span className="swatch" style={{ background: "#2a78d6", opacity: 0.35 }} />
+        faded = low confidence, sent to review
+      </div>
+      <div className="muted small" style={{ marginTop: 4 }}>Zoom in to see individual tiles.</div>
     </div>
   );
 }

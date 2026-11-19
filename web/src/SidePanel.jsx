@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { acres, meters, pct, SUBMARKET_LABEL, titleCase, usd } from "./format.js";
 import ScatterBrush from "./ScatterBrush.jsx";
 import ScoreBreakdown from "./ScoreBreakdown.jsx";
+import BeforeAfter from "./BeforeAfter.jsx";
 import WeightSliders from "./WeightSliders.jsx";
 
 // Right-hand panel: weights + top 10 + scatter, or the selected hexagon's facts, score breakdown and parcels.
@@ -72,6 +73,7 @@ export default function SidePanel(props) {
         </div>
       )}
       {!p.filtered && <ScoreBreakdown props={p} weights={props.weights} />}
+      <BeforeAfter key={p.hex} hex={p.hex} />
 
       <dl className="facts">
         <dt>Candidate land (buildable)</dt>

@@ -14,7 +14,7 @@ export default function ScatterBrush({ features, color, selected, onBrush, onSel
       .map((f) => f.properties);
     const x = d3.scaleLinear().domain([0, FAR_CAP]).range([M.left, W - M.right]);
     const y = d3.scaleLinear().domain([0, 1]).range([H - M.bottom, M.top]);
-    const svg = d3.select(ref.current).attr("viewBox", `0 0 ${W} ${H}`).attr("width", W).attr("height", H);
+    const svg = d3.select(ref.current).attr("viewBox", `0 0 ${W} ${H}`).attr("width", "100%").attr("height", null);
     svg.selectAll("*").remove();
 
     svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.bottom})`)
@@ -23,8 +23,8 @@ export default function ScatterBrush({ features, color, selected, onBrush, onSel
       .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")).tickSizeOuter(0));
     svg.append("text").attr("class", "chart-label").attr("x", W - M.right).attr("y", H - 4).attr("text-anchor", "end")
       .text("estimated floor-area ratio →  (lower = more underused)");
-    svg.append("text").attr("class", "chart-label").attr("x", 4).attr("y", M.top + 2).attr("dy", "0.7em")
-      .text("parking ↑");
+    svg.append("text").attr("class", "chart-label").attr("x", M.left + 6).attr("y", M.top).attr("dy", "0.7em")
+      .text("↑ surface parking (share of tiles)");
 
     const brush = d3.brush()
       .extent([[M.left, M.top], [W - M.right, H - M.bottom]])

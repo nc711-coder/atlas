@@ -4,6 +4,16 @@ import { acres, pct, titleCase } from "./format.js";
 export default function Tooltip({ hover }) {
   if (!hover) return null;
   const style = { left: hover.x + 14, top: hover.y + 14 };
+  if (hover.tile) {
+    const t = hover.tile;
+    return (
+      <div className="tooltip" style={style}>
+        <div className="tt-title">Imagery classifier: {t.pred}</div>
+        <div className="muted">confidence {Math.round(t.confidence * 100)}% · 60 m tile, Aug 2025 photo</div>
+        {t.needs_review && <div className="badge warn">⚠ low confidence, sent to review</div>}
+      </div>
+    );
+  }
   if (hover.parcel) {
     const p = hover.parcel;
     return (

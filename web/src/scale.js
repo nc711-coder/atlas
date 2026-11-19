@@ -13,3 +13,7 @@ export function makeScoreColor(features) {
   fn.thresholds = q.quantiles();
   return fn;
 }
+
+// Land-cover classes: the first three validated categorical slots; "other" folds to neutral grey.
+export const LANDCOVER_COLORS = { built: "#2a78d6", parking: "#eb6834", green: "#1baf7a", other: "#b4b2a9" };
+export const LANDCOVER_LABELS = { built: "built (roofs)", parking: "surface parking", green: "trees / grass", other: "roads, bare, mixed" };
